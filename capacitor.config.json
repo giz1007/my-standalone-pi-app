@@ -1,0 +1,5 @@
+{
+  "appId": "com.gizmo.pidash",
+  "appName": "pi-dashboard-app",
+  "webDir": "dist"
+}

@@ -1,0 +1,25 @@
+name: Build iOS App
+on: [push]
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm run build
+      - run: npx cap sync
+      - name: Build Xcode Project
+        run: |
+          xcodebuild -workspace ios/App/App.xcworkspace -scheme App -sdk iphoneos -configuration Debug -allowProvisioningUpdates CODE_SIGNING_ALLOWED=NO OBJROOT=build SYMROOT=build
+      - name: Compress App Package
+        run: |
+          mkdir -p build/Payload
+          mv build/Debug-iphoneos/App.app build/Payload/
+          cd build && zip -r ../PiDashboard.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PiDashboardApp
+          path: PiDashboard.ipa
