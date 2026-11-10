@@ -2,24 +2,46 @@ name: Build iOS App
 on: [push]
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 22
-      - run: npm install
-      - run: npm run build
-      - run: npx cap sync
-      - name: Build Xcode Project
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Web Assets
+        run: npm run build
+
+      - name: Sync Capacitor iOS
+        run: npx cap sync ios
+
+      - name: Build Unsigned Application Package
         run: |
-          xcodebuild -workspace ios/App/App.xcworkspace -scheme App -sdk iphoneos -configuration Debug -allowProvisioningUpdates CODE_SIGNING_ALLOWED=NO OBJROOT=build SYMROOT=build
-      - name: Compress App Package
+          xcodebuild -workspace ios/App/App.xcworkspace \
+                     -scheme App \
+                     -configuration Debug \
+                     -destination 'generic/platform=iOS Simulator' \
+                     CODE_SIGNING_ALLOWED=NO \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGN_IDENTITY="" \
+                     AD_HOC_CODE_SIGNING_ALLOWED=YES \
+                     OBJROOT=build \
+                     SYMROOT=build
+
+      - name: Create Mobile Archive File
         run: |
           mkdir -p build/Payload
-          mv build/Debug-iphoneos/App.app build/Payload/
+          cp -R build/Debug-iphonesimulator/App.app build/Payload/
           cd build && zip -r ../PiDashboard.ipa Payload
-      - uses: actions/upload-artifact@v4
+
+      - name: Upload Finished Package
+        uses: actions/upload-artifact@v4
         with:
           name: PiDashboardApp
           path: PiDashboard.ipa
